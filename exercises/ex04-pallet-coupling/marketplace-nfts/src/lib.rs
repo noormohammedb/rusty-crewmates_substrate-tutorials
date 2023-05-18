@@ -208,10 +208,22 @@ impl<T: Config> Pallet<T> {
 
 impl<T: Config> Sellable<T::AccountId, T::NFTId> for Pallet<T> {
 	fn amount_owned(nft_id: T::NFTId, account: T::AccountId) -> u128 {
-		todo!("return the amount of nft_id owned by account")
+		// todo!("return the amount of nft_id owned by account")
+		Account::<T>::get(nft_id, account)
 	}
 
 	fn transfer(nft_id: T::NFTId, from: T::AccountId, to: T::AccountId, amount: u128) -> u128 {
-		todo!("do the transfer")
+		// todo!("do the transfer")
+		let mut transfering_amount = 0;
+		Account::<T>::mutate(nft_id, from, |data| {
+			let initial_amount = data.clone();
+			*data = data.saturating_sub(amount);
+			transfering_amount = initial_amount - *data;
+		});
+
+		Account::<T>::mutate(nft_id, to, |data| {
+			*data = data.saturating_add(transfering_amount);
+		});
+		transfering_amount
 	}
 }
