@@ -79,7 +79,7 @@ impl pallet_balances::Config for Test {
 
 impl pallet_weights::Config for Test {
 	type Event = Event;
-	type WeightInfo = ();
+	type WeightInfo = pallet_weights::weights::WeightInfo<Test>;
 }
 
 // Build genesis storage according to the mock runtime.
