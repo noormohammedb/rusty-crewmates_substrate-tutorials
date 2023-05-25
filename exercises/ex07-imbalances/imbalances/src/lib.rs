@@ -8,8 +8,9 @@ pub use pallet::*;
 use sp_std::vec::Vec;
 
 use frame_support::{
-	sp_runtime::traits::{CheckedConversion, CheckedMul},
-	traits::{Currency, Imbalance, TryDrop},
+	// sp_runtime::traits::{CheckedConversion, CheckedMul},
+	// traits::{Currency, Imbalance, TryDrop},
+	traits::{Currency, Imbalance},
 	transactional,
 };
 
@@ -22,10 +23,7 @@ pub type NegativeBalanceOf<T> = <<T as Config>::Currency as Currency<
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{
-		pallet_prelude::*,
-		traits::{ExistenceRequirement, WithdrawReasons},
-	};
+	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::config]
@@ -72,6 +70,10 @@ pub mod pallet {
 			// We want to compensate this imbalance by increasing `benefeciary` balance by the
 			// corresponding amount
 
+			ensure!(
+				T::Currency::resolve_into_existing(&beneficiary, amount_to_distribute).is_ok(),
+				Error::<T>::AccountDoesNotExist
+			);
 			Ok(())
 		}
 
@@ -88,6 +90,9 @@ pub mod pallet {
 			// Hint: use the `ration` method
 			// Hint: TreasuryAccount is defined as on l35 as a Config constant
 
+			let (neg_imbalance, _) = T::Currency::slash(&target, amount);
+			let (one_by_three, _) = neg_imbalance.ration(1, 2);
+			T::Currency::resolve_creating(&T::TreasuryAccount::get(), one_by_three);
 			Ok(())
 		}
 
@@ -107,6 +112,16 @@ pub mod pallet {
 			// except for the TreasuryFlatCut amount, that goes to the treasury for each sacked
 			// account Hint: there is a `split` method implemented on imbalances
 
+			for acc in sacked_accounts {
+				let free = T::Currency::free_balance(&acc) - T::Currency::minimum_balance();
+				let (neg_imb, _) = T::Currency::slash(&acc, free);
+				let (to_tre, to_ben) = neg_imb.split(T::TreasuryFlatCut::get());
+				ensure!(
+					T::Currency::resolve_into_existing(&beneficiary, to_ben).is_ok(),
+					<Error<T>>::AccountDoesNotExist
+				);
+				T::Currency::resolve_creating(&T::TreasuryAccount::get(), to_tre);
+			}
 			Ok(())
 		}
 	}
