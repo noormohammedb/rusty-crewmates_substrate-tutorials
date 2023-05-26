@@ -53,6 +53,26 @@ pub mod pallet {
 			// iterate over the `GenesisAssetList` and:
 			// 1) mint each asset
 			// 2) transfer the correct amount of this asset to each account in the inner vec
+
+			let genesis_data = self.genesis_asset_list.iter().enumerate();
+			for (asset_id, (creator, meta_data, supply, owner_and_amt_vec)) in genesis_data {
+				if *supply == 0 || meta_data.len() > T::MaxLength::get() as usize {
+					panic!();
+				}
+
+				let bounded_meta_data =
+					BoundedVec::<u8, T::MaxLength>::truncate_from((meta_data.clone()).to_vec());
+				let _ =
+					pallet::Pallet::<T>::inner_mint(creator.clone(), bounded_meta_data, *supply);
+				for (to, amount) in owner_and_amt_vec {
+					let _ = pallet::Pallet::<T>::inner_transfer(
+						asset_id as u128,
+						creator.clone(),
+						to.clone(),
+						*amount,
+					);
+				}
+			}
 		}
 	}
 
