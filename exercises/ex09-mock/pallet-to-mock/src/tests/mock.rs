@@ -82,15 +82,20 @@ pub struct MyMock {}
 impl PriceOracle for MyMock {
 	type Error = ();
 	fn get_price() -> Result<u64, Self::Error> {
-		Ok(1000)
+		Ok(100)
 	}
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	frame_system::GenesisConfig::default()
-		.build_storage::<TestRuntime>()
-		.unwrap()
-		.into()
+	let mut genesis_store =
+		frame_system::GenesisConfig::default().build_storage::<TestRuntime>().unwrap();
+	let balance_genesis = pallet_balances::pallet::GenesisConfig::<TestRuntime> {
+		balances: vec![(1, 200)],
+	};
+	balance_genesis.assimilate_storage(&mut genesis_store).unwrap();
+	let mut ext = sp_io::TestExternalities::new(genesis_store);
+	ext.execute_with(|| System::set_block_number(1));
+	ext
 }
 
 pub const ALICE: AccountId = 1;
