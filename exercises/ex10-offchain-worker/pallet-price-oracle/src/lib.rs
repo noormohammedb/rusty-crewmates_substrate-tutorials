@@ -48,11 +48,18 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn offchain_worker(_n: BlockNumberFor<T>) {
 			// TODO: call `fetch_btc_price_and_send_unsigned_transaction` and log any error
+			let btc_price_result = Self::fetch_btc_price_and_send_unsigned_transaction();
+			match btc_price_result {
+				Err(err_string) => log::info!("{}", err_string),
+				_ => (),
+			}
 		}
 	}
 
 	#[pallet::error]
-	pub enum Error<T> {}
+	pub enum Error<T> {
+		OriginErro,
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -62,6 +69,10 @@ pub mod pallet {
 			// - ensure origin is none
 			// - set BTCPrice storage
 			// - emit `BtcPriceSet` event
+
+			ensure_none(origin);
+			<BTCPrice<T>>::put(btc_price);
+			Self::deposit_event(Event::<T>::BtcPriceSet(btc_price));
 
 			Ok(())
 		}
